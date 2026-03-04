@@ -1,51 +1,61 @@
-from transformers import Trainer, TrainingArguments
-from data_preprocessing import load_data, tokenize_data
-from model import load_model
-from evaluation import compute_metrics
+import numpy as np
+import torch
+from sklearn.metrics import f1_score
+from config import device, RANDOM_SEED, BEST_MODEL_PATH
+from data_preprocessing import load_raw_data, aggregate_annotations, normalize_and_label, split_data
+from dataset import make_dataloaders
+from model import RobertaMultiTaskRegression
+from baseline import run_tfidf_baseline
+from train import train
+from evaluate import evaluate, plot_confusion_matrices
+import numpy as np
 
-def main():
-    print("Loading datatset...")
-    ds = load_data()
+torch.manual_seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 
-    print("Tokenizing...")
-    tokenized_dataset, tokenizer = tokenize_data(ds)
-    
-    print("Loading model...")
-    num_labels = 3
-    model = load_model(num_labels)
+print(f"Using device: {device}")
 
-    print("Setting training arguments...")
-    training_args = TrainingArguments(
-        output_dir="./results", 
-        eval_strategy="epoch",
-        save_strategy="epoch",
-        learning_rate=2e-5,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
-        num_train_epochs=3,
-        weight_decay=1e-4,
-        load_best_model_at_end=True
-    )
-    
-    print("Creating trainer...")
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=tokenized_dataset["train"],
-        eval_dataset=tokenized_dataset["validation"],
-        compute_metrics=compute_metrics
-    )
-    
-    print("Starting training...")
-    trainer.train()
+# Loading and processing data
+df = load_raw_data()
+agg_df   = aggregate_annotations(df)
+agg_df   = normalize_and_label(agg_df)
+train_df, val_df, test_df = split_data(agg_df)
 
-    print("Evaluating on test set...")
-    test_results = trainer.evaluate(tokenized_dataset["test"])
-    print("\nFinal Test Results:")
-    print(test_results)
+# TF-IDF baseline
+tfidf_sent_f1, tfidf_tox_f1 = run_tfidf_baseline(train_df, test_df)
 
-    model.save_pretrained("./saved_model")
-    tokenizer.save_pretrained("./saved_model")
+# Making dataloaders
+train_loader, val_loader, test_loader = make_dataloaders(train_df, val_df, test_df)
 
-if __name__ == "__main__":
-    main()
+# Training
+print("\n" + "="*55)
+print(" TRAINING: RoBERTa Dual-Head + Auxiliary Supervision")
+print("="*55 + "\n")
+model = RobertaMultiTaskRegression().to(device)
+train(model, train_loader, val_loader)
+
+# Step 6: Final test evaluation
+print("\n" + "="*55)
+print(" FINAL TEST EVALUATION (best checkpoint)")
+print("="*55)
+model.load_state_dict(torch.load(BEST_MODEL_PATH, map_location=device))
+result = evaluate(model, test_loader, split_name="Test")
+_, test_sent_f1, test_tox_f1, sent_preds, tox_preds, sent_true, tox_true = result
+
+# Step 7: Confusion matrices
+plot_confusion_matrices(sent_true, sent_preds, tox_true, tox_preds)
+
+# Step 8: Final comparison table
+print("\n" + "="*70)
+print(" FINAL RESULTS COMPARISON")
+print("="*70)
+print(f"{'Model':<45} | {'Sent F1':>7} | {'Tox F1':>7}")
+print("-"*70)
+
+print(f"{'TF-IDF + Logistic Regression':<45} | {tfidf_sent_f1:>7.4f} | {tfidf_tox_f1:>7.4f}")
+print(f"{'RoBERTa Dual-Head + Auxiliary':<45} | {test_sent_f1:>7.4f} | {test_tox_f1:>7.4f}")
+print("-"*70)
+print(f"\nImprovement over TF-IDF baseline:")
+print(f"  Sentiment: {test_sent_f1 - tfidf_sent_f1:+.4f}")
+print(f"  Toxicity:  {test_tox_f1  - tfidf_tox_f1:+.4f}")
+print("="*70)
