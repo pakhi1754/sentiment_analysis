@@ -15,7 +15,7 @@ Multi-task learning model that jointly predicts **sentiment** and **toxicity** f
 | Model | Sentiment F1 | Toxicity F1 |
 |---|---|---|
 | TF-IDF + Logistic Regression | 0.779 | 0.616 |
-| **RoBERTa Dual-Head (Ours)** | **0.844** | **0.691** |
+| **RoBERTa** | **0.844** | **0.691** |
 
 The toxicity result is notable: the model is essentially at the limit of what is learnable from this data, with remaining error attributable to inherent annotator disagreement rather than model limitations.
 
