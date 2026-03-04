@@ -1,4 +1,4 @@
-# Dual-Head RoBERTa for Sentiment & Toxicity Classification
+# Multi-Task RoBERTa for Sentiment & Toxicity Classification
 
 Multi-task learning model that jointly predicts **sentiment** and **toxicity** from social media text using a single shared RoBERTa backbone with separate regression heads.
 
@@ -26,12 +26,12 @@ The toxicity result is notable: the model is essentially at the limit of what is
 ## File Structure
 ```
 ├── config.py              # All hyperparameters and constants
-├── data_preprocessing.py  # Loading, Bayes error analysis, normalization, splitting
+├── data_preprocessing.py  # Loading, normalization, splitting
 ├── dataset.py             # PyTorch Dataset and DataLoader creation
-├── model.py               # RobertaDualHeadRegression architecture
+├── model.py               # RobertaMultiTaskRegression architecture
 ├── loss.py                # Huber + MSE combined loss
 ├── train.py               # Training loop with early stopping
-├── evaluate.py            # Evaluation, threshold search, confusion matrices
+├── evaluate.py            # Evaluation, confusion matrices
 ├── baseline.py            # TF-IDF + Logistic Regression baseline
 └── main.py                # Entry point — runs full pipeline
 ```
