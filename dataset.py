@@ -5,7 +5,6 @@ from transformers import RobertaTokenizer
 from config import MODEL_NAME, MAX_LEN, BATCH_SIZE, SAVE_DIR
 
 tokenizer = RobertaTokenizer.from_pretrained(MODEL_NAME)
-tokenizer.save_pretrained(SAVE_DIR)
 
 # Custom dataset
 class HateSpeechDataset(Dataset):
