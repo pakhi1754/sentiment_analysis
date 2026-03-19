@@ -1,12 +1,12 @@
 import torch
 import torch.nn as nn
 from torch.amp import autocast, GradScaler
-from transformers import get_linear_schedule_with_warmup
+from transformers import get_linear_schedule_with_warmup, RobertaTokenizer
 from model import freeze_bottom_layers, unfreeze_all_layers
 from loss import combined_loss
 from evaluate import evaluate
-from config import device, EPOCHS, PATIENCE, UNFREEZE_EPOCH, BACKBONE_LR, BACKBONE_LR_UNFROZEN, HEAD_LR, WEIGHT_DECAY, BEST_MODEL_PATH
-
+from config import device, EPOCHS, PATIENCE, UNFREEZE_EPOCH, BACKBONE_LR, BACKBONE_LR_UNFROZEN, HEAD_LR, WEIGHT_DECAY, SAVE_DIR, MODEL_NAME, MAX_LEN
+import json
 
 def train(model, train_loader, val_loader):
     """
@@ -15,6 +15,21 @@ def train(model, train_loader, val_loader):
     param train_loader: Dataloader for training set
     param test_loader: Dataloader for validation set
     """
+    # Saving tokenizer and config
+    tokenizer = RobertaTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer.save_pretrained(SAVE_DIR)
+
+    config = {
+        "model_name": MODEL_NAME,
+        "max_len": MAX_LEN,
+        "num_sentiment_outputs": 1,
+        "num_toxicity_outputs": 1,
+        "num_aux_labels": 4
+    }
+
+    with open(f"{SAVE_DIR}/config.json", "w") as f:
+        json.dump(config, f)
+        
     freeze_bottom_layers(model) # freeze bottom 6 layers
 
     optimizer = torch.optim.AdamW([
@@ -79,7 +94,7 @@ def train(model, train_loader, val_loader):
         if avg_f1 > best_avg_f1:
             best_avg_f1         = avg_f1
             epochs_no_improve   = 0
-            torch.save(model.state_dict(), BEST_MODEL_PATH)
+            torch.save(model.state_dict(), f"{SAVE_DIR}/best_roberta_multi_task.pt")
             print(f"  -> Best saved (avg F1: {best_avg_f1:.4f})\n")
         else:
             epochs_no_improve += 1

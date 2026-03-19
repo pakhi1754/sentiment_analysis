@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from sklearn.metrics import f1_score
-from config import device, RANDOM_SEED, BEST_MODEL_PATH
+from config import device, RANDOM_SEED, SAVE_DIR
 from data_preprocessing import load_raw_data, aggregate_annotations, normalize_and_label, split_data
 from dataset import make_dataloaders
 from model import RobertaMultiTaskRegression
@@ -34,18 +34,16 @@ print("="*55 + "\n")
 model = RobertaMultiTaskRegression().to(device)
 train(model, train_loader, val_loader)
 
-# Step 6: Final test evaluation
 print("\n" + "="*55)
 print(" FINAL TEST EVALUATION (best checkpoint)")
 print("="*55)
-model.load_state_dict(torch.load(BEST_MODEL_PATH, map_location=device))
+
+model.load_state_dict(torch.load(f"{SAVE_DIR}/best_roberta_multi_task.pt", map_location=device))
 result = evaluate(model, test_loader, split_name="Test")
 _, test_sent_f1, test_tox_f1, sent_preds, tox_preds, sent_true, tox_true = result
 
-# Step 7: Confusion matrices
 plot_confusion_matrices(sent_true, sent_preds, tox_true, tox_preds)
 
-# Step 8: Final comparison table
 print("\n" + "="*70)
 print(" FINAL RESULTS COMPARISON")
 print("="*70)

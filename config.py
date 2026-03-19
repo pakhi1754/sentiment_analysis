@@ -36,7 +36,7 @@ TOX_THRESHOLD_LOW  = round((-1.5 - TOX_MIN) / (TOX_MAX - TOX_MIN), 3)  # 0.467
 TOX_THRESHOLD_HIGH = round(( 1.0 - TOX_MIN) / (TOX_MAX - TOX_MIN), 3)  # 0.638
 
 # Paths
-BEST_MODEL_PATH = "best_roberta_dual_head.pt"
-PLOT_PATH       = "confusion_matrices.png"
+SAVE_DIR  = "./model_artifacts"
+PLOT_PATH = "confusion_matrices.png"
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
